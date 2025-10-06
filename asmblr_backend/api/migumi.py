@@ -3,7 +3,7 @@
 from flask import Blueprint, request, jsonify
 import traceback
 import geolipi.symbolic as gls
-from mpspy.symbolic.utils import recursive_gls_to_cisl
+from sysl.utils import recursive_gls_to_sysl
 import sysl.symbolic as ssls
 from asmblr.base import BaseNode
 import asmblr.nodes as anodes
