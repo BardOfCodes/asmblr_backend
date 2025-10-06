@@ -3,7 +3,7 @@
 from flask import Blueprint, request, jsonify
 import traceback
 import geolipi.symbolic as gls
-from mpspy.symbolic.utils import recursive_gls_to_cisl
+from sysl.utils import recursive_gls_to_sysl
 import sysl.symbolic as ssls
 from asmblr.base import BaseNode
 from sysl.shader.evaluate import evaluate_to_shader
@@ -81,7 +81,7 @@ def data_to_shader(data):
     
     if geolipi_mode == 'primitive':
         render_mode = shader_settings.get('render_mode', {})
-        new_expr, _ = recursive_gls_to_cisl(expr_restored, 2, version=render_mode)
+        new_expr, _ = recursive_gls_to_sysl(expr_restored, 2, version=render_mode)
         if verbose:
             messages.append("Converting GeoLIPI expression to CISL primitives (v3)")
     elif geolipi_mode == 'singular':
