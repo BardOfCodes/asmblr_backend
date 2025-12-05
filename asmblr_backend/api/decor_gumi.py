@@ -70,7 +70,7 @@ def update_design():
 
 
 
-@decorgumi_bp.route('/get-morphological-opening', methods=['GET'])
+@decorgumi_bp.route('/get-morphological-opening', methods=['POST'])
 def get_morphological_opening():
     """Get the morphological opening from the database."""
     try:
@@ -105,7 +105,7 @@ def get_morphological_opening():
             status_code=500
         )
 
-@decorgumi_bp.route('/get-initial-curvature-bounded', methods=['GET'])
+@decorgumi_bp.route('/get-initial-curvature-bounded', methods=['POST'])
 def get_initial_curvature_bounded():
     """Get the default curvature bounded from the database."""
     try:
@@ -141,7 +141,7 @@ def get_initial_curvature_bounded():
             status_code=500
         )
 
-@decorgumi_bp.route('/validate-design', methods=['GET'])
+@decorgumi_bp.route('/validate-design', methods=['POST'])
 def validate_design():
     """Validate the design with the given input."""
     try:
@@ -193,7 +193,7 @@ def validate_design():
         ) 
 
 
-@decorgumi_bp.route('/get-medial-issue-points', methods=['GET'])
+@decorgumi_bp.route('/get-medial-issue-points', methods=['POST'])
 def get_medial_issue_points():
     """Get the medial issue points from the database."""
     try:
@@ -230,7 +230,7 @@ def get_medial_issue_points():
         )
 
 
-@decorgumi_bp.route('/get-curvature_issue-points', methods=['GET'])
+@decorgumi_bp.route('/get-curvature_issue-points', methods=['POST'])
 def get_curvature_issue_points():
     """Get the curvature issue points from the database."""
 
