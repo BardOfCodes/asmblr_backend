@@ -5,7 +5,8 @@ import traceback
 import geolipi.symbolic as gls
 from decor_gumi.arc_opt import (optimize_polyarc, 
                                 default_curvature_bounded, minkowski_summed,
-                                violating_medial_points, curvature_issue_points)
+                                violating_medial_points, curvature_issue_points,
+                                expr_to_api_polyarc)
 
 
 decorgumi_bp = Blueprint('decor_gumi', __name__, url_prefix='/api/decor_gumi')
@@ -44,7 +45,9 @@ def update_design():
         if 'polyarc' in data:
             input_polyarc = data['polyarc']
             # Create HTML visualization
-            output_polyarc = optimize_polyarc(input_polyarc, two_sided, dilation_rate, mixed_opt)
+            # output_polyarc = optimize_polyarc(input_polyarc, two_sided, dilation_rate, mixed_opt)
+            expr_out = optimize_polyarc(input_polyarc, two_sided, dilation_rate, mixed_opt)
+            output_polyarc = expr_to_api_polyarc(expr_out)
         else:
             return create_response(
                 error="No input polyarc provided",
