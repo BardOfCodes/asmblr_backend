@@ -44,7 +44,7 @@ def update_design():
         messages = []
         data = request.json or {}
         two_sided = data.get('two_sided', True)
-        dilation_rate = 0.25 # data.get('dilation_rate', 0.105)
+        dilation_rate = data.get('dilation_rate', 0.105)
         mixed_opt = data.get('mixed_opt', False)
         if 'polyarc' in data:
             input_polyarc = data['polyarc']
@@ -122,7 +122,7 @@ def get_initial_curvature_bounded():
         if 'polyarc' in data:
             input_polyarc = data['polyarc']
             two_sided = data.get('two_sided', True)
-            dilation_rate = 0.35 # data.get('dilation_rate', 0.105)
+            dilation_rate = data.get('dilation_rate', 0.105)
             # Create HTML visualization
             output_polyarc = default_curvature_bound_iterative(input_polyarc, two_sided, dilation_rate)
         else:
