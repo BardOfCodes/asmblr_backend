@@ -1,6 +1,6 @@
-"""Geolipi shader generation endpoints."""
+"""GeoLIPI shader generation endpoints."""
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request
 import traceback
 import geolipi.symbolic as gls
 from sysl.utils import recursive_gls_to_sysl
@@ -8,37 +8,23 @@ import sysl.symbolic as ssls
 from asmblr.base import BaseNode
 from sysl.shader.evaluate import evaluate_to_shader
 from sysl.shader import DEFAULT_SETTINGS
-from sysl.shader_vis.generate_shader_html import create_shader_html
+from sysl.shader_runtime.generate_shader_html import create_shader_html, create_multibuffer_shader_html
+
+from asmblr_backend.utils import create_response
 
 geolipi_bp = Blueprint('geolipi', __name__, url_prefix='/api/geolipi')
 
-def create_response(content=None, messages=None, error=None, status_code=200):
-    """
-    Create standardized API response with content, messages, and error handling.
-    
-    Args:
-        content: The main response data (dict or any serializable type)
-        messages: List of informational messages to show as notifications
-        error: Error information (string or dict with message and traceback)
-        status_code: HTTP status code
-    
-    Returns:
-        Flask response with standardized format
-    """
-    response_data = {
-        "content": content,
-        "messages": messages or [],
-        "error": error
-    }
-    
-    return jsonify(response_data), status_code
 
-def data_to_shader(data):
+def data_to_shader(data, shader_mode):
     """
     Convert graph data to shader code with informational messages.
     
+    Args:
+        data: Request payload containing modules and settings
+        shader_mode: Either "singlepass" or "multipass"
+    
     Returns:
-        tuple: (shader_code, uniforms, textures, messages)
+        tuple: (all_shader_bundles, messages)
     """
     messages = []
     
@@ -74,6 +60,7 @@ def data_to_shader(data):
     else:
         if verbose:
             messages.append(f"Using custom shader settings with {len(shader_settings)} parameters")
+    post_process_shader = shader_settings.pop("post_process_shader", ["part_outline_nobg"])
     
     # Process GeoLIPI mode settings
     geolipi_settings = data.get('geolipiSettings', {})
@@ -83,37 +70,48 @@ def data_to_shader(data):
         render_mode = shader_settings.get('render_mode', {})
         new_expr, _ = recursive_gls_to_sysl(expr_restored, 2, version=render_mode)
         if verbose:
-            messages.append("Converting GeoLIPI expression to CISL primitives (v3)")
+            messages.append("Converting GeoLIPI expression to SySL primitives (v3)")
     elif geolipi_mode == 'singular':
-        new_expr = ssls.MatSolidV3(expr_restored, ssls.NonEmissiveMaterialV3((0.7, 0.7, .7), (0.9,), (0.9,), (0.1,)))
+        render_mode = shader_settings.get('render_mode', {})
+        temp = gls.Sphere((0.1))
+        new_temp, _ = recursive_gls_to_sysl(temp, 2, version=render_mode)
+        new_expr = new_temp.__class__(expr_restored, new_temp.args[1])
         if verbose:
             messages.append("Wrapping GeoLIPI expression in singular material")
     else:
         raise ValueError(f"Invalid GeoLIPI mode: '{geolipi_mode}'. Must be 'primitive' or 'singular'")
 
     # Generate shader code
-    shader_code, uniforms, textures = evaluate_to_shader(new_expr.sympy(), settings=shader_settings)
-    if verbose:
-        messages.append(f"Shader generation completed: {len(uniforms)} uniforms, {len(textures)} textures")
+    all_shader_bundles = evaluate_to_shader(
+        new_expr, 
+        settings=shader_settings,
+        post_process_shader=post_process_shader, 
+        mode=shader_mode
+    )
     
-    return shader_code, uniforms, textures, messages
+    if verbose:
+        messages.append(f"Total {len(all_shader_bundles)} shader bundles generated")
+        for shader_bundle in all_shader_bundles:
+            uniforms = shader_bundle['uniforms']
+            textures = shader_bundle['textures']
+            messages.append(f"Shader generation completed: {len(uniforms)} uniforms, {len(textures)} textures")
+    
+    return all_shader_bundles, messages
+
 
 @geolipi_bp.route('/generate-shader', methods=['POST'])
 def generate_shader():
     """Generate shader code with HTML visualization."""
     try:
-        # Extract the payload from the request
         data = request.json or {}
-        shader_code, uniforms, textures, messages = data_to_shader(data)
+        all_shader_bundles, messages = data_to_shader(data, shader_mode="multipass")
         
         # Create HTML visualization
-        html_code = create_shader_html(
-            shader_code, 
-            uniforms, 
-            textures, 
+        html_code = create_multibuffer_shader_html(
+            all_shader_bundles,
             show_controls=True, 
             backend="twgl",
-            layout_horizontal=False, 
+            layout_horizontal=True, 
             allow_overflow=False
         )
         
@@ -136,18 +134,26 @@ def generate_shader():
             status_code=500
         )
 
+
 @geolipi_bp.route('/generate-twgl-shader', methods=['POST'])
 def generate_twgl_shader():
     """Generate TWGL-compatible shader code with configurable settings."""
     try:
         print("Generating TWGL shader")
-        # Extract the payload from the request
         data = request.json or {}
-        shader_code, uniforms, textures, messages = data_to_shader(data)
+        all_shader_bundles, messages = data_to_shader(data, shader_mode="singlepass")
+        
+        # Extract shader components from bundles
+        if isinstance(all_shader_bundles, tuple):
+            shader_code, uniforms, textures = all_shader_bundles
+        else:
+            shader_bundle = all_shader_bundles[0] if isinstance(all_shader_bundles, list) else all_shader_bundles
+            shader_code = shader_bundle.get('shader_code', '')
+            uniforms = shader_bundle.get('uniforms', {})
+            textures = shader_bundle.get('textures', {})
         
         messages.append("TWGL shader code generated successfully")
         
-        # Return the shader code and uniforms dictionary
         return create_response(
             content={
                 "shaderCode": shader_code,

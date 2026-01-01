@@ -1,2 +1,22 @@
-Flask==2.3.2
-Flask-CORS==4.0.0
+# Core Flask dependencies
+Flask>=2.3.2
+Flask-CORS>=4.0.0
+
+# Data processing
+numpy>=1.24.0
+trimesh>=4.0.0
+
+# Internal packages (install from local paths or package registry)
+# Uncomment and adjust paths as needed:
+# -e ../../../geolipi
+# -e ../../../sysl
+# -e ../../../asmblr
+# -e ../../../migumi
+# -e ../../../decor_gumi
+
+# Note: The following packages are required but should be installed separately:
+# - geolipi (symbolic geometry library)
+# - sysl (shader symbolic language)
+# - asmblr (assembler node system)
+# - migumi (animation/state system)
+# - decor_gumi (decorative geometry optimization)

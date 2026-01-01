@@ -7,7 +7,15 @@ from .system import system_bp
 from .geolipi import geolipi_bp
 from .sysl import sysl_bp
 from .migumi import migumi_bp
-from .decor_gumi import decorgumi_bp
+
+# Optional: decor_gumi module (only if decor_gumi package is installed)
+try:
+    from .decor_gumi import decorgumi_bp
+    DECOR_GUMI_AVAILABLE = True
+except ImportError:
+    DECOR_GUMI_AVAILABLE = False
+    decorgumi_bp = None
+
 
 def register_blueprints(app: Flask):
     """Register all API blueprints."""
@@ -17,4 +25,10 @@ def register_blueprints(app: Flask):
     app.register_blueprint(geolipi_bp)
     app.register_blueprint(sysl_bp)
     app.register_blueprint(migumi_bp)
-    app.register_blueprint(decorgumi_bp)
+    
+    # Register optional blueprints
+    if DECOR_GUMI_AVAILABLE:
+        app.register_blueprint(decorgumi_bp)
+        print("[asmblr_backend] DecorGumi API enabled")
+    else:
+        print("[asmblr_backend] DecorGumi API disabled (decor_gumi package not installed)")

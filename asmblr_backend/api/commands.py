@@ -1,4 +1,10 @@
-"""Command execution endpoints."""
+"""
+Command execution endpoints.
+
+WARNING: This module allows arbitrary command execution and should only be used
+in trusted development environments. DO NOT deploy to production without
+implementing proper command whitelisting and authentication.
+"""
 
 import subprocess
 import threading
@@ -9,6 +15,21 @@ commands_bp = Blueprint('commands', __name__, url_prefix='/api/commands')
 
 # In-memory storage for async commands
 commands = {}
+
+# Allowed commands whitelist (add commands as needed)
+# Set to None to allow all commands (DANGEROUS - development only)
+ALLOWED_COMMANDS = None  # TODO: Define whitelist for production
+
+
+def _is_command_allowed(cmd: str) -> bool:
+    """Check if a command is in the allowed whitelist."""
+    if ALLOWED_COMMANDS is None:
+        return True  # Allow all (development mode)
+    
+    # Check if the base command is in the whitelist
+    base_cmd = cmd.split()[0] if cmd.split() else ""
+    return base_cmd in ALLOWED_COMMANDS
+
 
 def run_command(command_id, cmd, params):
     """Execute command and store result."""
@@ -32,9 +53,15 @@ def run_command(command_id, cmd, params):
     except Exception as e:
         commands[command_id].update({'status': 'error', 'error': str(e)})
 
+
 @commands_bp.route('/execute', methods=['POST'])
 def execute():
-    """Execute a command."""
+    """
+    Execute a command.
+    
+    WARNING: This endpoint executes arbitrary shell commands.
+    Only use in trusted development environments.
+    """
     data = request.json
     cmd = data.get('command')
     params = data.get('params', {})
@@ -42,6 +69,10 @@ def execute():
     
     if not cmd:
         return jsonify({'error': 'Command is required'}), 400
+    
+    # Security check
+    if not _is_command_allowed(cmd):
+        return jsonify({'error': 'Command not in allowed whitelist'}), 403
     
     if async_exec:
         # Async execution
@@ -71,6 +102,7 @@ def execute():
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
+
 @commands_bp.route('/status/<command_id>')
 def status(command_id):
     """Get command status."""
@@ -78,6 +110,7 @@ def status(command_id):
         return jsonify({'error': 'Command not found'}), 404
     
     return jsonify(commands[command_id])
+
 
 @commands_bp.route('/list')
 def list_commands():
